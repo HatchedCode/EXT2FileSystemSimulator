@@ -172,9 +172,7 @@ int main(int argc, char *argv[ ])
   
   printf("root refCount = %d\n", root->refCount);
 
-  //printf("hit a key to continue : "); getchar();
   while(1){
-    // printf("TOP main loop(): CWD INFO:\nino=%d  dev=%d  i_size=%d  refCount=%d  search-key=%s\n", running->cwd->ino, running->cwd->dev, running->cwd->INODE.i_size, running->cwd->refCount, "Just about to ask for cmd");
     printf("input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|mount|umount|clear|quit| ");
     fgets(line, 128, stdin);
     line[strlen(line)-1] = 0;
@@ -207,7 +205,6 @@ int main(int argc, char *argv[ ])
        change_dir();
     if(strcmp(cmd, "pwd")==0)
     {
-      // printf("main Loop(): ino=%d  dev=%d  i_size=%d  refCount=%d  search-key=%s\n", running->cwd->ino, running->cwd->dev, running->cwd->INODE.i_size, running->cwd->refCount, "Just about to enter pwd");
       pwd(running->cwd);
     }
     if(strcmp(cmd, "mkdir") == 0)

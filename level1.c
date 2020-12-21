@@ -1,3 +1,5 @@
+/**** level1.c ****/
+
 /**** globals defined in main.c file ****/
 extern MINODE minode[NMINODE];
 extern MINODE *root;
@@ -271,7 +273,6 @@ int creat_file()
     MINODE *start, *pip;
     char *parent, *child;
     int pino;
-    // int dev;
     char temp_pathname[BLKSIZE];
 
     strcpy(temp_pathname, pathname);
@@ -379,12 +380,10 @@ int my_creat(MINODE *pip, char *name)
     return ino;
 }
 
-// Should be complete now
 int rmdir()
 {
     int ino, i, pino;
     MINODE *mip, *pip;
-    // int dev;
     char *parent, *child; 
     char temp_pathname[BLKSIZE];
     char temp_basename[BLKSIZE];
@@ -571,13 +570,8 @@ int rmdir()
         printf("rmdir(): refCount = %d\n", mip->refCount);
     }
 
-    // if (mip->refCount != 0)
-    // {
-    //     printf("iput: Did not clear to 0\n");
-    // }
-
     /* get parent’s ino and inode */
-    pino = search(mip, ".."); //Issue here is that parent is . when the parent should be .. --> this should be a simple fix though.
+    pino = search(mip, "..");
     
     if(!pino)
     {
@@ -644,7 +638,6 @@ int rmdir()
 }
 
 
-/* Not complete yet*/
 /*
     rm_child(): remove the entry [INO rlen nlen name] from parent's data block.
     pip->parent Minode, name = entry to remove
@@ -695,7 +688,7 @@ int rm_child(MINODE *parent, char *name)
         if(parent->INODE.i_block[i] == 0)
         {
             printf("rm_child(): Inside the zero check\n");
-            break; //Empty block   --> Might have to break here;
+            break; //Empty block
         }
 
         prev = 0;
@@ -779,7 +772,6 @@ int rm_child(MINODE *parent, char *name)
                         parent->INODE.i_block[index] = parent->INODE.i_block[index + 1];
                     }
                     parent->INODE.i_block[index--] = 0;
-                    //printf("lrec_len: %d, removed: %d\n", lastentry->rec_len, removed_rec_len);
                 }
                 else if (cp + dp->rec_len == buf + 1024) // Last Entry in the block
                 {
@@ -788,7 +780,6 @@ int rm_child(MINODE *parent, char *name)
                         printf("rm_child(): Last entry\n");
                     }
 
-                    // Still need to work on this.
                     prev->rec_len += dp->rec_len;
 
                     if(should_print)
@@ -916,7 +907,6 @@ int link(char *old, char *new)
 int unlink(char *filename)
 {
     int ino, pino;
-    // int dev;
     char *parent, *child, temp_basename[BLKSIZE], temp_pathname[BLKSIZE];
     MINODE *mip, *pmip;
 
@@ -946,7 +936,6 @@ int unlink(char *filename)
     pino = getino(parent, &dev);
     pmip = iget(dev, pino);
 
-    //Book states to use rm_child(pmip, ino, child);
     rm_child(pmip, child);
     pmip->dirty = 1;
     iput(pmip);
@@ -961,9 +950,9 @@ int unlink(char *filename)
     {
         int i;
         char buf[BLKSIZE];
-        /*MISSING A PIECE HERE; NEXT COMMENT...*/
+
         //deallocate all data blocks in INODE
-        truncate(&(mip->INODE)); //I think this is it, not sure whether to use mip->dev in truncate or just dev
+        truncate(&(mip->INODE));
 
         //deallocate INODE
         idealloc(dev, mip->ino);
@@ -976,7 +965,6 @@ int symlink(char *old, char *new)
 {
     int oino, nino, pino;
     MINODE *omip, *nmip, *pmip;
-    // int dev;
     char pathnamecopy[BLKSIZE];
     char *parent, *child, temp_basename[BLKSIZE], temp_pathname[BLKSIZE];
 
@@ -1047,7 +1035,7 @@ int symlink(char *old, char *new)
         return -1;
     }
 
-    nmip->INODE.i_mode = 0xA1FF;//0xA000; //0120000; //0xA1FF; //0xA000;
+    nmip->INODE.i_mode = 0xA1FF;
 
     //Writing old into the block
     memcpy(nmip->INODE.i_block, old, strlen(old));

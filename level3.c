@@ -1,3 +1,5 @@
+/**** level3.c ****/
+
 /**** globals defined in main.c file ****/
 extern MINODE minode[NMINODE];
 extern MINODE *root;
@@ -18,22 +20,15 @@ extern char *t1, *t2;
 int mount(char *mount_point_pathname)    /*  Usage: mount filesys mount_point OR mount */
 {
     // 1. Ask for filesys (a pathname) and mount_point (a pathname also).
-    //    If mount with no parameters: display current mounted filesystems.
+    // If mount with no parameters: display current mounted filesystems.
     if(mount_point_pathname[0] ==0 || pathname[0] == 0 || mount_point_pathname == NULL || strlen(mount_point_pathname) == 0)
     {
         display_mounted_fs();
         return 0;
     }
 
-// 2. Check whether filesys is already mounted: 
-//    (you may store the name of mounted filesys in the MOUNT table entry). 
-//    If already mounted, reject;
-//    else: allocate a free MOUNT table entry (whose dev=0 means FREE).
     MOUNT *new_fs;
-
-    // new_fs = (MOUNT *)malloc(sizeof(MOUNT));
-    // new_fs->dev = 0;
-    
+    // 2. Check whether filesys is already mounted: 
     int i;
     for(i = 0; i < NFS_MOUNT && mountTable[i].mounted_inode; i++)
     {
@@ -48,7 +43,7 @@ int mount(char *mount_point_pathname)    /*  Usage: mount filesys mount_point OR
 
     int new_dev = 0;
 
-    // 3. open filesys for RW; use its fd number as the new DEV;
+    // 3. open filesys for RW; use its fd number as the new DEV UNDER LINUX;
     //    Check whether it's an EXT2 file system: if not, reject.
     if((new_dev = open(pathname, O_RDWR)) < 0)
     {
@@ -63,13 +58,12 @@ int mount(char *mount_point_pathname)    /*  Usage: mount filesys mount_point OR
     /* verify it's an ext2 file system *****************/
     if (sp->s_magic != 0xEF53){
         printf("name = %s   and magic = %x is not an ext2 filesystem\n", pathname, sp->s_magic);
+        close(mountTable[i].dev);
         return -1;
     } 
 
 
     // 4. For mount_point: find its ino, then get its minode:
-    //     call  ino  = getino(pathname);  to get ino:
-    //     call  mip  = iget(DEV, ino);    to get its minode in memory;
     int ino;
     MINODE *mip;
     // int dev;
@@ -78,17 +72,18 @@ int mount(char *mount_point_pathname)    /*  Usage: mount filesys mount_point OR
     mip  = iget(dev, ino);    //to get its minode in memory; 
 
     // 5. Check mount_point is a DIR.  
-    //    Check mount_point is NOT busy (e.g. can't be someone's CWD)
     if(mip->INODE.i_mode != DIR_TYPE)
     {
         printf("mount(): mounting point is not a directory.\n");
+        close(mountTable[i].dev);
         return -1;
     }
 
-    //Check that minode is not busy
+    // Check mount_point is NOT busy (e.g. can't be someone's CWD)
     if(mip->refCount != 1)
     {
         printf("mount(): INODE is BUSY.\n");
+        close(mountTable[i].dev);
         return -1;
     }
 
@@ -96,8 +91,8 @@ int mount(char *mount_point_pathname)    /*  Usage: mount filesys mount_point OR
     new_fs->dev = new_dev;
 
     //   (For convenience, store the filesys name in the Mount table, and also its
-    //                     ninodes, nblocks, bitmap blocks, inode_start block, etc. 
-    //    for quick reference)
+    // ninodes, nblocks, bitmap blocks, inode_start block, etc. 
+    //for quick reference)
     new_fs->nblocks = sp->s_blocks_count;
     new_fs->ninodes = sp->s_inodes_count;
 
@@ -113,7 +108,7 @@ int mount(char *mount_point_pathname)    /*  Usage: mount filesys mount_point OR
 
 
     // 7. Mark mount_point's minode as being mounted on and let it point at the
-    //    MOUNT table entry, which points back to the mount_point minode.
+    //MOUNT table entry, which points back to the mount_point minode.
     mip->mounted = 1;
 
     mip->mptr = new_fs;
@@ -122,7 +117,7 @@ int mount(char *mount_point_pathname)    /*  Usage: mount filesys mount_point OR
 
     printf("fs %s mounted\n", pathname);
 
-    // . return 0 for SUCCESS;
+    //return 0 for SUCCESS;
     return 0;
 }
 
@@ -143,17 +138,11 @@ int display_mounted_fs()
 
 int umount(char *filesys)
 {
-
-    // 1. Search the MOUNT table to check filesys is indeed mounted.
-    // if(searchFS(filesys) != -1)
-    // {
-    //     printf("umount(): FS =%s is not mounted.\n", filesys);
-    //     return -1;
-    // }
-
     MOUNT *t_mptr;
     int found = 0;
     int i;
+
+    // 1. Search the MOUNT table to check filesys is indeed mounted.
     for(i = 0; i < NFS_MOUNT && mountTable[i].mounted_inode; i++)
     {
         if(!strcmp(mountTable[i].name, filesys))
@@ -166,14 +155,12 @@ int umount(char *filesys)
     if(!found)
     {
         printf("umount(): FS =%s is not mounted.\n", filesys);
-//        printf("umount(): filesystem could not be found\n");
         return -1;
     }
 
     t_mptr = &(mountTable[i]);
 
     // 2. Check whether any file is still active in the mounted filesys;
-    //       e.g. someone's CWD or opened files are still there,
     //    if so, the mounted filesys is BUSY ==> cannot be umounted yet.
     //    HOW to check?      ANS: by checking all minode[].dev
     int j;
@@ -190,8 +177,8 @@ int umount(char *filesys)
     }
 
     // 3. Find the mount_point's inode (which should be in memory while it's mounted 
-    //    on).  Reset it to "not mounted"; then 
-    //          iput()   the minode.  (because it was iget()ed during mounting)
+    //on).  Reset it to "not mounted"; then 
+    //iput()   the minode.  (because it was iget()ed during mounting)
     MINODE *mi_ptr;
     
     mi_ptr = t_mptr->mounted_inode;
@@ -215,9 +202,6 @@ int umount(char *filesys)
     strcpy(mountTable[i].name,"\0");
 
     iput(mi_ptr);
-
-    printf("index being unmounted i=%d\n", i);
-
     printf("fs %s has been unmounted\n", filesys);
 
     // 4. return 0 for SUCCESS;

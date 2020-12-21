@@ -1,3 +1,5 @@
+/**** level2.c ****/
+
 #include <stdio.h>
 
 /**** globals defined in main.c file ****/
@@ -19,7 +21,6 @@ extern char *t1, *t2;
 int open_file(int mode)
 {
     int ino;
-    // int dev;
     if(pathname[0] == '/')
     {
         dev = root->dev;
@@ -29,7 +30,6 @@ int open_file(int mode)
         dev = running->cwd->dev;
     }
 
-    printf("open_file(): pathname=%s     dev=%d\n", pathname, dev);
     //getting pathname inode number
     ino = getino(pathname, &dev);
 
@@ -75,7 +75,6 @@ int open_file(int mode)
     }
 
 
-    //Code here
     OFT *oftp;
 
     oftp = (OFT* )malloc(sizeof(OFT));
@@ -131,54 +130,6 @@ int open_file(int mode)
     // iput(mip); this will change where the oftp is point at by putting the minode
 
     return index;
-//   1. ask for a pathname and mode to open:
-//          You may use mode = 0|1|2|3 for R|W|RW|APPEND
-
-//   2. get pathname's inumber:
-//          if (pathname[0]=='/') dev = root->dev;          // root INODE's dev
-//          else                  dev = running->cwd->dev;  
-//          ino = getino(pathname); 
-
-//   3. get its Minode pointer
-//          mip = iget(dev, ino);  
-
-//   4. check mip->INODE.i_mode to verify it's a REGULAR file and permission OK.
-      
-//      Check whether the file is ALREADY opened with INCOMPATIBLE mode:
-//            If it's already opened for W, RW, APPEND : reject.
-//            (that is, only multiple R are OK)
-
-//   5. allocate a FREE OpenFileTable (OFT) and fill in values:
- 
-//          oftp->mode = mode;      // mode = 0|1|2|3 for R|W|RW|APPEND 
-//          oftp->refCount = 1;
-//          oftp->minodePtr = mip;  // point at the file's minode[]
-
-//   6. Depending on the open mode 0|1|2|3, set the OFT's offset accordingly:
-
-//       switch(mode){
-//          case 0 : oftp->offset = 0;     // R: offset = 0
-//                   break;
-//          case 1 : truncate(mip);        // W: truncate file to 0 size
-//                   oftp->offset = 0;
-//                   break;
-//          case 2 : oftp->offset = 0;     // RW: do NOT truncate file
-//                   break;
-//          case 3 : oftp->offset =  mip->INODE.i_size;  // APPEND mode
-//                   break;
-//          default: printf("invalid mode\n");
-//                   return(-1);
-//       }
-
-//    7. find the SMALLEST i in running PROC's fd[ ] such that fd[i] is NULL
-//       Let running->fd[i] point at the OFT entry
-
-//    8. update INODE's time field
-//          for R: touch atime. 
-//          for W|RW|APPEND mode : touch atime and mtime
-//       mark Minode[ ] dirty
-
-//    9. return i as the file descriptor
 }
 
 int truncateLevel2(MINODE *mip)
@@ -296,19 +247,12 @@ int truncateLevel2(MINODE *mip)
         put_block(dev, blk, buf);
     }
 
-    //
-    mip->INODE.i_atime = mip->INODE.i_mtime = time(0L); //I think we just update all the times, but not sure. rn I just updating mtime and atime.
+    mip->INODE.i_atime = mip->INODE.i_mtime = time(0L); //updating mtime and atime.
     mip->INODE.i_size = 0;
     mip->dirty = 1;
     mip->INODE.i_blocks = 0;
 
     iput(mip);
-//     // 1. release mip->INODE's data blocks;
-//     //  a file may have 12 direct blocks, 256 indirect blocks and 256*256
-//     //  double indirect data blocks. release them all.
-//     // 2. update INODE's time field
-
-//     // 3. set INODE's size to 0 and mark Minode[ ] dirty
     return 1;
 }
 
@@ -344,23 +288,6 @@ int close_file(int fd)
     iput(mip);
 
     return 0;
-
-
-    // 1. verify fd is within range.
-
-    // 2. verify running->fd[fd] is pointing at a OFT entry
-
-    // 3. The following code segments should be fairly obvious:
-    //  oftp = running->fd[fd];
-    //  running->fd[fd] = 0;
-    //  oftp->refCount--;
-    //  if (oftp->refCount > 0) return 0;
-
-    //  // last user of this OFT entry ==> dispose of the Minode[]
-    //  mip = oftp->inodeptr;
-    //  iput(mip);
-
-    //  return 0; 
 }
 
 int lseek_level2(int fd, int position)
@@ -374,12 +301,15 @@ int lseek_level2(int fd, int position)
     int i;
     OFT *oftp;
 
+    // From fd, find the OFT entry. 
     if(!(oftp = running->fd[fd]))
     {
         printf("lseek_level2(): The given file descriptor does not point to a valid OFT entry.\n");
         return -1;
     }
 
+    // change OFT entry's offset to position but make sure NOT to over run either end
+    // of the file.
     if(position < 0 || position > (oftp->mptr->INODE.i_size - 1)) //either end of the file.  --> NOT SURE ABOUT THIS COMMENT. I think this if statement is violating this comment.
     {
         printf("lseek_level2(): the requested position is not within the file size bounds ( 0 <= position <= %d ). position = %d\n", (oftp->mptr->INODE.i_size - 1), position);
@@ -387,19 +317,14 @@ int lseek_level2(int fd, int position)
     }
 
     //We are assuming that position starts from the beginning of the file, not relative to the last position.
-
     int original_position = oftp->offset;
     oftp->offset = position;
-    
-    return original_position;
-    // From fd, find the OFT entry. 
-
-    // change OFT entry's offset to position but make sure NOT to over run either end
-    // of the file.
 
     // return originalPosition
+    return original_position;
 }
 
+// This function displays the currently opened files as follows:
 int pfd()
 {
     printf("pfd:\n");
@@ -416,20 +341,12 @@ int pfd()
         running->fd[i]->mptr->ino
         );
     }
-    // This function displays the currently opened files as follows:
-
-    //     fd     mode    offset    INODE
-    //    ----    ----    ------   --------
-    //      0     READ    1234   [dev, ino]  
-    //      1     WRITE      0   [dev, ino]
-    //   --------------------------------------
-    // to help the user know what files has been opened
 }
 
 // As you already know, these (Next two functions) are needed for I/O redirections.
-
 dup_level2(int fd)
 {
+    
     if(fd < 0 || fd > 7)
     {
         printf("dup_level2(): the file descriptor is not within the correct range ( 0 <= fd <= 7). Given fd = %d\n", fd);
@@ -438,6 +355,7 @@ dup_level2(int fd)
 
     OFT *oftp;
 
+    // verify fd is an opened descriptor;
     if(!(oftp = running->fd[fd]))
     {
         printf("dup_level2(): The given file descriptor does not point to a valid OFT entry.\n");
@@ -456,14 +374,12 @@ dup_level2(int fd)
         return -1;
     }
     
+    //duplicates (copy) fd[fd] into FIRST empty fd[ ] slot;
     running->fd[index] = (OFT *)malloc(sizeof(OFT));
     running->fd[index] = oftp;
-    running->fd[index]->refCount++;
+    running->fd[index]->refCount++; //   increment OFT's refCount by 1;
 
     return index;
-//   verify fd is an opened descriptor;
-//   duplicates (copy) fd[fd] into FIRST empty fd[ ] slot;
-//   increment OFT's refCount by 1;
 }
 
 dup2_level2(int fd, int gd)
@@ -491,25 +407,21 @@ dup2_level2(int fd, int gd)
 
     OFT *oftp_gd;
 
-    //This below looks good to me, but if something below does not work then it is because of the below code, but I believe it works right.(ps, I didn't actually test it yet (11/11/2019))
-
     if(!(oftp_gd = running->fd[gd]))
     {
+        //   duplicates fd[fd] into fd[gd]; 
         oftp_gd = oftp_fd;
-        // printf("dup2_level2(): The second (gd) given file descriptor does not point to a valid OFT entry.\n");
-        // return -1;
     }
     else
     {
+        //   CLOSE gd first if it's already opened;
         oftp_gd = 0;
+
+        //   duplicates fd[fd] into fd[gd]; 
         oftp_gd = oftp_fd;
     }
     
     return gd;
-
-
-//   CLOSE gd first if it's already opened;
-//   duplicates fd[fd] into fd[gd]; 
 }
 
 
@@ -518,9 +430,10 @@ int read_file()
 {
     char line[256];
     int fd, nbytes;
-    //We are assuming that the file is open for R or RW
+    // ASSUME: file is opened for RD or RW;
     do
     {
+        //ask for a fd;
         printf("Enter the fd (or type: exit to return to main menu): ");
         fgets(line, 256, stdin);
         line[strlen(line)-1] = 0;
@@ -543,12 +456,12 @@ int read_file()
         {
             printf("read_file(): Error, Invalid file descriptor.\n");
             continue;
-        }
-           
+        }   
     } while (1);
 
     do
     {
+        //ask for a nbytes to read;
         printf("Enter the number of bytes to read from the file: ");
         fgets(line, 256, stdin);
         line[strlen(line)-1] = 0;
@@ -572,7 +485,6 @@ int read_file()
             printf("read_file(): Error, Invalid number of bytes to read.\n");
             continue;
         }
-           
     } while (1);
 
 
@@ -590,6 +502,7 @@ int read_file()
         return -1;
     }
 
+    // verify that fd is indeed opened for RD or RW;
     if(oftp->mode == 1 || oftp == 3)
     {
         printf("read_file(): file descriptor is not open for RD or READ-WRITE.\n");
@@ -598,12 +511,8 @@ int read_file()
 
     char buf[BLKSIZE];
 
+    //return(myread(fd, buf, nbytes));
     return (myread(fd, buf, nbytes));
-//   Preparations: 
-//     ASSUME: file is opened for RD or RW;
-//     ask for a fd  and  nbytes to read;
-//     verify that fd is indeed opened for RD or RW;
-//     return(myread(fd, buf, nbytes));
 }
 
 
@@ -646,31 +555,10 @@ int myread(int fd, char buf[], int nbytes)
         else //read double indirect blocks
         {
             char buf2[BLKSIZE];
-
-            // If the double indirect block i_block [13] does not exist
-            // it must be allocated and initialized to 0.
-            // if (mip->INODE.i_block[13] == 0)
-            // {
-            //     printf("myread(): Not able to read anything from block[13] double indirect block.\n");
-            //     break;
-            // }
-
-            // Entry in the double indirect block
             get_block(dev, mip->INODE.i_block[13], buf1);
-            
-            // if (buf1[((lblk - (12 + 256)) / 256)] == 0)
-            // {
-            //     printf("myread(): Not able to read anything from double indirect block.\n");
-            //     break;
-            // }
 
             // Double indirect block
             get_block(dev, buf1[((lblk - (12 + 256)) / 256)], buf2);
-            // if (buf2[(lblk - (12 + 256)) % 256] == 0)
-            // {
-            //     printf("myread(): Not able to read anything from double indirect block.\n");
-            //     break;
-            // }
 
             blk = buf2[(lblk - (12 + 256)) % 256];
         }
@@ -705,169 +593,10 @@ int myread(int fd, char buf[], int nbytes)
             avil -= remain;
             remain -= remain;
         }
-
-        // /*This while loop needs to be optimized, but will complete it later.*/
-        // while(remain > 0)
-        // {
-        //     *cq++ = cp++; //copy byte from readbuf[] into buf[]
-        //     oftp->offset++;  //Advance the offset
-        //     count++;    //Increment count as a number of bytes read.
-        //     avil--;
-        //     nbytes--;
-        //     remain--;
-        //     if(nbytes <= 0 || avil <= 0)
-        //     {
-        //         break;
-        //     }
-        // }
-        // //Loop out to outer while loop since one data block is not enough, loop back to outer whole loop for more.
+        // Loop out to outer while loop since one data block is not enough, loop back to outer whole loop for more.
     }
-
-    //printf("myread(): read %d char from file descriptor %d\n", count, fd);
     return count;
-
-    //Logical block: lblk = offset / BLKSIZE
-    
-
-    //the place to start read is defined as: start = offset % BLKSIZE
-
-
-    //the remaining number of bytes to read is defined as: remain = BLKSIZE - start
-
-
-    //The amount of bytes that the file has avaliable to read is: avil = file_size - offset
-
 }
-
-// int myread(int fd, char buf[ ], nbytes) behaves EXACTLY the same as the
-// read() system call in Unix/Linux. 
-// The algorithm of myread() can be best explained in terms of the following 
-// diagram.
-
-// (1).  PROC              (2).                          | 
-//      =======   |--> OFT oft[ ]                        |
-//      | pid |   |   ============                       |
-//      | cwd |   |   |mode=flags|                       | 
-//      | . ..|   |   |minodePtr ------->  minode[ ]     |      BlockDevice
-//      | fd[]|   |   |refCount=1|       =============   |   ==================
-//  fd: | .------>|   |offset    |       |  INODE    |   |   | INODE -> blocks|
-//      |     |       |===|======|       |-----------|   |   ==================
-//      =======           |              |  dev,ino  |   |
-//                        |              =============   |
-//                        |
-//                        |<------- avil ------->|
-//     -------------------|-----------------------
-//     |    |    | ...  |lbk  |   |  ...| .......|
-//     -------------------|---|------------------|-
-// lbk   0    1 .....     |rem|                   |
-//                      start                   fsize  
-                        
-// ------------------------------------------------------------------------------
-//                  Data structures for reading file
-
-// (1). Assume that fd is opened for READ. 
-// (2). The offset in the OFT points to the current byte position in the file from
-//      where we wish to read nbytes. 
-// (3). To the kernel, a file is just a sequence of contiguous bytes, numbered from
-//      0 to file_size - 1. As the figure shows, the current byte position, offset
-//      falls in a LOGICAL block (lbk), which is 
-
-//              lbk = offset / BLKSIZE 
-
-//      the byte to start read in that logical block is 
-
-//              start = offset % BLKSIZE 
-
-//      and the number of bytes remaining in the logical block is 
-
-//              remain = BLKSIZE - start. 
-
-//      At this moment, the file has 
-
-//              avil = file_size - offset 
-
-//      bytes available for read. 
-
-//      These numbers are used in the read algorithm.
-
-
-// (4). myread() behaves exactly the same as the read(fd, buf, nbytes) syscall of 
-//      Unix/Linux. It tries to read nbytes from fd to buf[ ], and returns the 
-//      actual number of bytes read.
-
-// (5). ============ Algorithm and pseudo-code of myread() =======================
-
-// int myread(int fd, char *buf, int nbytes)
-// {
-//  1. int count = 0;
-//     avil = fileSize - OFT's offset // number of bytes still available in file.
-//     char *cq = buf;                // cq points at buf[ ]
-
-//  2. while (nbytes && avil){
-
-//        Compute LOGICAL BLOCK number lbk and startByte in that block from offset;
-
-//              lbk       = oftp->offset / BLKSIZE;
-//              startByte = oftp->offset % BLKSIZE;
-     
-//        // I only show how to read DIRECT BLOCKS. YOU do INDIRECT and D_INDIRECT
- 
-//        if (lbk < 12){                     // lbk is a direct block
-//            blk = mip->INODE.i_block[lbk]; // map LOGICAL lbk to PHYSICAL blk
-//        }
-//        else if (lbk >= 12 && lbk < 256 + 12) { 
-//             //  indirect blocks 
-//        }
-//        else{ 
-//             //  double indirect blocks
-//        } 
-
-//        /* get the data block into readbuf[BLKSIZE] */
-//        get_block(mip->dev, blk, readbuf);
-
-//        /* copy from startByte to buf[ ], at most remain bytes in this block */
-//        char *cp = readbuf + startByte;   
-//        remain = BLKSIZE - startByte;   // number of bytes remain in readbuf[]
-
-//        while (remain > 0){
-//             *cq++ = *cp++;             // copy byte from readbuf[] into buf[]
-//              oftp->offset++;           // advance offset 
-//              count++;                  // inc count as number of bytes read
-//              avil--; nbytes--;  remain--;
-//              if (nbytes <= 0 || avil <= 0) 
-//                  break;
-//        }
- 
-//        // if one data block is not enough, loop back to OUTER while for more ...
-
-//    }
-//    printf("myread: read %d char from file descriptor %d\n", count, fd);  
-//    return count;   // count is the actual number of bytes read
-// }
-
-//                   OPTMIAZATION OF THE READ CODE:
-
-// Instead of reading one byte at a time and updating the counters on each byte,
-// TRY to calculate the maximum number of bytes available in a data block and
-// the number of bytes still needed to read. Take the minimum of the two, and read
-// that many bytes in one operation. Then adjust the counters accordingly. This 
-// would make the read loops more efficient. 
-
-// REQUIRED: optimize the read algorithm in your project.
-
-// ==========================  HOW TO cat ======================================
-// cat filename:
-
-//    char mybuf[1024], dummy = 0;  // a null char at end of mybuf[ ]
-//    int n;
-
-// 1. int fd = open filename for READ;
-// 2. while( n = read(fd, mybuf[1024], 1024)){
-//        mybuf[n] = 0;             // as a null terminated string
-//        // printf("%s", mybuf);   <=== THIS works but not good
-//        spit out chars from mybuf[ ] but handle \n properly;
-//    } 
-// 3. close(fd);
 
 int cat_file()
 {
@@ -910,6 +639,7 @@ int write_file()
     char line[256];
     do
     {
+        //ask for a fd
         printf("Enter the file descriptor (0 <= fd <= 7) or exit to return to main menu: ");
         fgets(line, 128, stdin);
         line[strlen(line)-1] = 0;
@@ -944,6 +674,7 @@ int write_file()
     char new_text[BLKSIZE];
     do
     {
+        //ask for a text string to write;
         printf("Enter text:\n");
         fgets(line, 128, stdin);
         line[strlen(line)-1] = 0;
@@ -961,44 +692,19 @@ int write_file()
         return -1;
     }
 
+    //   2. verify fd is indeed opened for WR or RW or APPEND mode
     if(oftp->mode == 0)
     {
         printf("write_file(): Error, file is not open for WRITE nor READ-WRITE.\n");
         return -1;
     }
 
-    if(oftp->mode == 1)
-    {
-        printf("write_file(): mode = WRITE,  right before truncate\n");
-        
-        int x;
-        for(x=0; x < 12; x++)
-        {
-            printf("Block[%d] = %d\n", x, oftp->mptr->INODE.i_block[x]);
-        }
-        //truncateLevel2(oftp->mptr);
-        printf("write_file(): mode = WRITE,  right AFTER truncate\n");
-        // int i;
-        // for(i=0; i< 12 && oftp->mptr->INODE.i_block[i]; i++)
-        // {
-        //     bdealloc(oftp->mptr->dev, oftp->mptr->INODE.i_block[i]);
-        // }
-    }
-
     int nbytes;
     char tbuf[BLKSIZE];
-    memcpy(tbuf, new_text, strlen(new_text));
+    memcpy(tbuf, new_text, strlen(new_text)); //   3. copy the text string into a buf[] and get its length as nbytes.
     nbytes = strlen(tbuf);
 
     return (mywrite(fd, tbuf, nbytes));
-//   1. Preprations:
-//      ask for a fd   and   a text string to write;
-
-//   2. verify fd is indeed opened for WR or RW or APPEND mode
-
-//   3. copy the text string into a buf[] and get its length as nbytes.
-
-//      return(mywrite(fd, buf, nbytes));
 }
 
 int mywrite(int fd, char buf[], int nbytes)
@@ -1028,10 +734,7 @@ int mywrite(int fd, char buf[], int nbytes)
                 mip->INODE.i_block[lbk] = balloc(mip->dev);
             }
             blk = mip->INODE.i_block[lbk];
-        }        // if(oftp->mode == 1)
-        // {
-        //     memset(wbuf,0, 1024*sizeof(char));
-        // }
+        }
         else if(lbk >= 12 && lbk < 256 + 12) // Indirect Blocks
         {
             if (mip->INODE.i_block[12] == 0)
@@ -1051,7 +754,6 @@ int mywrite(int fd, char buf[], int nbytes)
 
             if(blk == 0)
             {
-                // I think this is what it is asking for
                 blk = balloc(mip->dev);
                 put_block(dev, mip->INODE.i_block[12], blk);
             }
@@ -1075,14 +777,7 @@ int mywrite(int fd, char buf[], int nbytes)
                     ibuf[index] = 0;
                 }
                 put_block(mip->dev, mip->INODE.i_block[13], buf1);
-                // Need to initialize
-                // mip->INODE.i_block[13] = 0;
-                //memset(mip->INODE.i_block[13], 0 , 256*sizeof(char));
             }
-        // if(oftp->mode == 1)
-        // {
-        //     memset(wbuf,0, 1024*sizeof(char));
-        // }
             // Entry in the double indirect block
             get_block(dev, mip->INODE.i_block[13], buf1);
             if (buf1[((lbk - 12) + 256) / 256] == 0)
@@ -1098,10 +793,6 @@ int mywrite(int fd, char buf[], int nbytes)
                     ibuf[index] = 0;
                 }
                 put_block(mip->dev, buf1[((lbk - 12) + 256) / 256], buf1);
-
-                // Need to initialize
-                // buf1[((lbk - 12) + 256) / 256] = 0;
-                //memset(buf1[((lbk - 12) + 256) / 256], 0 , 256*sizeof(char));
             }
 
             // Double indirect block
@@ -1119,9 +810,6 @@ int mywrite(int fd, char buf[], int nbytes)
                     ibuf[index] = 0;
                 }
                 put_block(mip->dev, buf2[((lbk - 12) + 256) % 256], buf2);
-
-                // // Need to put back
-                // put_block(dev, buf1[((lbk - 12) + 256) % 256], buf2);
             }
         }
 
@@ -1129,25 +817,6 @@ int mywrite(int fd, char buf[], int nbytes)
 
         char *cp = wbuf + startByte;
         remain = BLKSIZE - startByte;
-
-        // while(remain > 0)
-        // {
-        //     *cp++ = *cq++;
-        //     nbytes--;
-        //     remain--;
-        //     oftp->offset--;
-        //     if(oftp->offset > mip->INODE.i_size)
-        //     {
-        //         mip->INODE.i_size++;
-        //     }
-
-        //     if(nbytes <= 0 )
-        //     {
-        //         break;
-        //     }
-        // }
-
-        // Approved by KCW as being the right approach
         if (remain > nbytes)
         {
             memcpy(cp, cq, nbytes);
@@ -1157,10 +826,7 @@ int mywrite(int fd, char buf[], int nbytes)
             if(oftp->offset > mip->INODE.i_size)
             {
                 mip->INODE.i_size += nbytes;
-            }        // if(oftp->mode == 1)
-        // {
-        //     memset(wbuf,0, 1024*sizeof(char));
-        // }
+            }
 
             remain -= nbytes;
             nbytes -= nbytes;
@@ -1187,142 +853,6 @@ int mywrite(int fd, char buf[], int nbytes)
     printf("wrote %d char into file descriptor fd=%d\n", count, fd);
     return count;
 }
-
-// The algorithm of write_file() can also be explained in terms of the following
-// figure.
-
-// (1).  PROC              (2).                          | 
-//      =======   |--> OFT oft[ ]                        |
-//      | pid |   |   ============                       |
-//      | cwd |   |   |mode=flags|                       | 
-//      | . ..|   |   |minodePtr ------->  minode[ ]     |      BlockDevice
-//      | fd[]|   |   |refCount=1|       =============   |   ==================
-//  fd: | .------>|   |offset    |       |  INODE    |   |   | INODE -> blocks|
-//      |     |       |===|======|       |-----------|   |   ==================
-//      =======           |              | dev,inode |   | 
-//                        |              |  dirty    |   |
-//                        |              =============   |
-//                        |
-//     -------------------|-----------------
-//     |    |    | ...  |lbk  | ............
-//     -------------------|-----------------
-// lbk   0    1 .....     |rem|            |
-//                      start           fileSize (in INODE)  
-                        
-// ------------------------------------------------------------------------------
-//                Data Structures for write()
-
-        // if(oftp->mode == 1)
-        // {
-        //     memset(wbuf,0, 1024*sizeof(char));
-        // }
-// mywrite behaves exactly the same as Unix's write(fd, buf, nbytes) syscall.
-// It writes nbytes from buf[ ] to the file descriptor fd, extending the file 
-// size as needed.
-
-// int mywrite(int fd, char buf[ ], int nbytes) 
-// {
-//   while (nbytes > 0 ){
-
-//      compute LOGICAL BLOCK (lbk) and the startByte in that lbk:
-
-//           lbk       = oftp->offset / BLKSIZE;
-//           startByte = oftp->offset % BLKSIZE;
-
-//     // I only show how to write DIRECT data blocks, you figure out how to 
-//     // write indirect and double-indirect blocks.
-
-//      if (lbk < 12){                         // direct block
-//         if (ip->INODE.i_block[lbk] == 0){   // if no data block yet
-
-//            mip->INODE.i_block[lbk] = balloc(mip->dev);// MUST ALLOCATE a block
-//         }
-//         blk = mip->INODE.i_block[lbk];      // blk should be a disk block now
-//      }
-//      else if (lbk >= 12 && lbk < 256 + 12){ // INDIRECT blocks 
-//               // HELP INFO:
-//               if (i_block[12] == 0){
-//                   allocate a block for it;
-//                   zero out the block on disk !!!!
-//               }
-//               get i_block[12] into an int ibuf[256];
-//               blk = ibuf[lbk - 12];
-//               if (blk==0){
-//                  allocate a disk block;
-//                  record it in i_block[12];
-//               }
-//               .......
-//      }
-//      else{
-//             // double indirect blocks */
-//      }
-
-//      /* all cases come to here : write to the data block */
-//      get_block(mip->dev, blk, wbuf);   // read disk block into wbuf[ ]  
-//      char *cp = wbuf + startByte;      // cp points at startByte in wbuf[]
-//      remain = BLKSIZE - startByte;     // number of BYTEs remain in this block
-
-//      while (remain > 0){               // write as much as remain allows  
-//            *cp++ = *cq++;              // cq points at buf[ ]
-//            nbytes--; remain--;         // dec counts
-//            oftp->offset++;             // advance offset
-//            if (offset > INODE.i_size)  // especially for RW|APPEND mode
-//                mip->INODE.i_size++;    // inc file size (if offset > fileSize)
-//            if (nbytes <= 0) break;     // if already nbytes, break
-//      }
-//      put_block(mip->dev, blk, wbuf);   // write wbuf[ ] to disk
-     
-//      // loop back to outer while to write more .... until nbytes are written
-//   }
-
-//   mip->dirty = 1;       // mark mip dirty for iput() 
-//   printf("wrote %d char into file descriptor fd=%d\n", nbytes, fd);           
-//   return nbytes;
-// }
-
-
-//                 OPTIMIZATION OF write Code
-
-// As in read(), the above inner while(remain > 0) loop can be optimized:
-// Instead of copying one byte at a time and update the control variables on each 
-// byte, TRY to copy only ONCE and adjust the control variables accordingly.
-
-// REQUIRED: Optimize the write() code in your project.
-
-// =============================================================================
-
-//                       HOW TO cp ONE file:
-
-// cp src dest:
-
-// 1. fd = open src for READ;
-
-// 2. gd = open dst for WR|CREAT; 
-
-//    NOTE:In the project, you may have to creat the dst file first, then open it 
-//         for WR, OR  if open fails due to no file yet, creat it and then open it
-//         for WR.
-
-// 3. while( n=read(fd, buf[ ], BLKSIZE) ){
-//        write(gd, buf, n);  // notice the n in write()
-//    }
-
-// ==============================================================================
-
-//                     HOW TO mv (rename)
-// mv src dest:
-
-// 1. verify src exists; get its INODE in ==> you already know its dev
-// 2. check whether src is on the same dev as src
-
-//               CASE 1: same dev:
-// 3. Hard link dst with src (i.e. same INODE number)
-// 4. unlink src (i.e. rm src name from its parent directory and reduce INODE's
-//                link count by 1).
-                
-//               CASE 2: not the same dev:
-// 3. cp src to dst
-// 4. unlink src
 
 int cp_level2(char *src, char *dest)
 {

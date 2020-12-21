@@ -17,9 +17,6 @@ extern int prev_fs;
 #define GROUP  000070
 #define OTHER  000007
 
-//Write YOUR OWN cd_ls_pwd.c file for ls, cd, pwd commands.
-
-
 change_dir()
 {
   if(!pathname || strlen(pathname) < 1) // Check to make sure the pathname is not empty
@@ -31,7 +28,6 @@ change_dir()
   // local variable definitions
   int ino, r = 0;
   MINODE *mip;
-  // int dev;
 
   printf("current cwd is: dev=%d  ino=%d\n", running->cwd->dev, running->cwd->ino);
   dev = pathname[0] == '/' ? root->dev : running->cwd->dev;
@@ -67,11 +63,6 @@ change_dir()
 
   r = iput(running->cwd); // Release the used minode pointed by mip
 
-  // if(!r) // Check to make the return value is valid
-  // {
-  //   printf("Something went wrong in iput(), error.\n");
-  //   return 0;
-  // }
   running->cwd = mip; // assign the cwd to minode that contains the INODE
   printf("new cwd is: dev=%d  ino=%d\n", running->cwd->dev, running->cwd->ino);
 
@@ -95,7 +86,6 @@ int list_file() // Creating a temporary to pass into the ls function
 int ls(char *pathname)
 {
   int r, ino;
-  // int dev;
 	char* filename, path[1024], cwd[256];
 	filename = "./"; //default to cwd
 
@@ -281,12 +271,9 @@ int pwd(MINODE *wd)
   }
   else // Otherwise, pass into a recursive pwd function
   {
-    // printf("pwd(): ino=%d  dev=%d  i_size=%d  refCount=%d  search-key=%s\n", wd->ino, wd->dev, wd->INODE.i_size, wd->refCount, "Just about to enter rpwd");
     rpwd(wd, temp);
     printf("%s\n", temp);
   }
-
-  should_print = 0;
 }
 
  int rpwd(MINODE *wd, char *temp)
@@ -323,12 +310,9 @@ int pwd(MINODE *wd)
   if(should_print)
   {
     printf("getting myino\n");
-    //printf("wd: %d\n", wd->INODE.i_block[0]);
   }
-
-  // printf("rpwd(): ino=%d  dev=%d  i_size=%d  refCount=%d  search-key=%s\n", wd->ino, wd->dev, wd->INODE.i_size, wd->refCount, ".");
   
-  myino = getino(".", &dev); //search(wd, "."); // get my ino by searching for "." in wd
+  myino = getino(".", &dev); // get my ino by searching for "." in wd
 
   if(!myino) // Check the myino is valid
   {
@@ -341,8 +325,7 @@ int pwd(MINODE *wd)
     printf("getting parentino\n");
   }
 
-  // printf("rpwd(): ino=%d  dev=%d  i_size=%d  refCount=%d  search-key=%s\n", wd->ino, wd->dev, wd->INODE.i_size, wd->refCount, "..");
-  parentino = getino("..", &dev);//= search(wd, ".."); // get parentino by searching for ".." in wd
+  parentino = getino("..", &dev);// get parentino by searching for ".." in wd
 
   if(!parentino) // Check that parentino is valid
   {

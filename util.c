@@ -367,9 +367,6 @@ int iput(MINODE *mip)
  /* first get the block containing this inode */
  get_block(mip->dev, block, buf);
 
-  // printf("iput(): dev=%d    block=%d\n", mip->dev, block);
-  // printf("iput(): buf is\n");
-  // printf("%s\n", buf);
  ip = (INODE *)buf + offset;
  *ip = mip->INODE;
 
@@ -379,7 +376,6 @@ int iput(MINODE *mip)
 
 int search(MINODE *mip, char *name)
 {
-  // YOUR serach() fucntion as in LAB 5
   int i;
   char *cp, temp[256], sbuf[BLKSIZE];
   DIR *dp;
@@ -417,15 +413,12 @@ int search(MINODE *mip, char *name)
           printf("found %s : inumber = %d\n", name, dp->inode);
         }
 
-        // printf("search(): ino returned=%d\n", dp->inode);
         return dp->inode;
       }
       cp += dp->rec_len;
       dp = (DIR *)cp;
      }
   }
-
-  // printf("search(): ino returned=%d\n", 0);
   return 0;
 }
 
@@ -506,24 +499,13 @@ int getino(char *pathname, int *tdev)
       return 2;
 
   if (pathname[0]=='/')
-    //mip = root;
     mip = iget(dev, 2);
   else
     mip = iget(running->cwd->dev, running->cwd->ino);
-    //mip = running->cwd;
-  // mip->refCount++;
 
   tokenize(pathname);
 
   for (i=0; i<n; i++){
-      // printf("getino():  mip->ino=%d  name[%d]=%s   mip->cur_dev=%d and prev_fs->dev=%d\n", mip->ino, i, name[i], mip->dev, prev_fs);
-      // printf("getino(): loop top: name=%s index=%d n=%d ino=%d dev=%d\n", name[i], i, n, mip->ino, *tdev);
-      // printf("getino(): cur dev=%d\n", *tdev);
-
-      // if(should_print)
-      // {
-      //   printf("===========================================\n");
-      // }
       if (mip->INODE.i_mode != DIR_TYPE)
       {
         printf("getino(): %s is not a dir\n", name[i]);
@@ -531,12 +513,8 @@ int getino(char *pathname, int *tdev)
         return 0;
       }
 
-      // printf("getino(): name[%d]=%s   mip->cur_dev=%d and prev_fs->dev=%d\n", i, name[i], mip->dev, prev_fs);
-
       if(strcmp(name[i], ".."))
       {
-        // printf("getino(): in the if\n");
-        // printf("getino():  mip->ino=%d   name[%d]=%s   mip->cur_dev=%d and prev_fs->dev=%d\n", mip->ino, i, name[i], mip->dev, prev_fs);
         if(mip->mounted == 1)
         {
           MOUNT *mtptr;
@@ -548,30 +526,21 @@ int getino(char *pathname, int *tdev)
 
           //Getting the root inode for the filesystem
           mptr = iget(mtptr->dev, 2);
-          mip = mptr; //Not sure if this should be here.
+          mip = mptr;
           *tdev = mptr->dev;
           root = mptr;
-          // newdev = n > 1 ? mptr->dev : *tdev;
-          // printf("getino(): changing FS, new dev=%d\n", *tdev);
         }
       }
       else
       {
-        // printf("getino(): in the else\n");
-        // printf("getino(): mip->ino=%d   name[%d]=%s   mip->cur_dev=%d and prev_fs->dev=%d\n", mip->ino, i, name[i], mip->dev, prev_fs);
-        // printf("getino(): ARE WE GOING TO GO BACK UP THE TREE\n");
         if(mip->ino == 2 && mip->dev != prev_fs)
         {
-          // printf("getino(): WE ARE GOING BACK UP THE TREE \n");
           MOUNT *mtptr;
           MINODE *mptr;
 
           int temp_preFSdev = 0;
 
           temp_preFSdev = prev_fs;
-
-          // printf("getino(): before iget\n");
-          // printf("mountTable[0]->dev=%d  prev_fs=%d\n", mountTable[0].dev, temp_preFSdev);
 
           int index;
           for(index=0; index< NFS_MOUNT && mountTable[index].mounted_inode; index++)
@@ -581,32 +550,13 @@ int getino(char *pathname, int *tdev)
               mtptr = &(mountTable[index]);
               mip = mountTable[index].mounted_inode;
               mptr = iget(prev_fs, 2);
-
-              // printf("mip->dev =%d mt_mptr->dev=%d  mptr->dev=%d  mptr->ino =%d mip->ino=%d \n", mip->dev, mtptr->dev, mptr->dev, mptr->ino, mip->ino);
-              // if(mip == mtptr->mounted_inode)
-              // {
-              //   printf("mounted_inode and new inode are the same\n");
-              // }
-              // else if(mptr == mip)
-              // {
-              //   printf("mip and mptr are the same\n");
-              // }
-
-              // printf("mip->dev=%d  mtptr->dev=%d mount_name=%s  name=%s\n", mip->dev, mtptr->dev, mtptr->mount_name, mtptr->name);
-              // printf("in for loop about to break;");
               break;
             }
           }
-          
-          // mip =  iget(temp_preFSdev, 2);
-          // printf("getino(): after finding mount-table\n");
 
-          //root = mip;
           if(mip->mounted)
           {
             prev_fs = mip->dev;
-            // printf("mptr->dev=%d mip->cur_dev=%d and prev_fs->dev=%d\n", mtptr->dev, mip->dev, prev_fs);
-            // printf("new pre_fs =%d\n", prev_fs);
           }
 
           if(mip->mounted == 1)
@@ -615,10 +565,6 @@ int getino(char *pathname, int *tdev)
           }
 
           *tdev = mptr->dev;
-          // printf("mptr->dev=%d mip->cur_dev=%d and prev_fs->dev=%d\n", mtptr->dev, mip->dev, prev_fs);
-
-          // printf("getino(): new dev=%d\n", *tdev);
-          //continue;
         }
       }
 
@@ -634,23 +580,6 @@ int getino(char *pathname, int *tdev)
          }
          return 0;
       }
-
-      // if(strcmp(name[i], ".."))
-      // {
-      //   if(mip->mounted == 1)
-      //   {
-      //     root = iget(dev)
-      //   }
-      // }
-      // else
-      // {
-      //   if(mip->ino == 2 && mip->dev != mountTable[0].dev)
-      //   {
-
-      //   }
-      // }     
-
-      //iput(mip);
       mip = iget(*tdev, ino);
    }
 
@@ -660,12 +589,6 @@ int getino(char *pathname, int *tdev)
    iput(mip);
    return ino;
 }
-
-// Same thing as getmyname function that starts at 284
-// int findmyname(MINODE *parent, u32 myino, char myname[ ]) 
-// {
-//   // find mynio in parent data block; copy name string to myname[ ];
-// }
 
 int findino(MINODE *mip, u32 *myino) // return ino of parent and myino of .
 {
@@ -683,9 +606,6 @@ int findino(MINODE *mip, u32 *myino) // return ino of parent and myino of .
 
 char *read_link(char *path)
 {
-  // int dev;
-
-  // dev = path[0] == '/' ? root->dev : running->cwd->dev;
   printf("read_link(): pathname=%s     dev=%d\n", path, dev);
 
   int ino = getino(path, &dev);
