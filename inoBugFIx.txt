@@ -1,0 +1,85 @@
+     return (mywrite(fd, tbuf, nbytes));
+             ^~~~~~~
+             fwrite
+level2.c: In function ‘mywrite’:
+level2.c:1013:56: warning: passing argument 3 of ‘put_block’ makes pointer from integer without a cast [-Wint-conversion]
+                 put_block(dev, mip->INODE.i_block[12], blk);
+                                                        ^~~
+In file included from main.c:31:0:
+util.c:22:5: note: expected ‘char *’ but argument is of type ‘int’
+ int put_block(int dev, int blk, char *buf)
+     ^~~~~~~~~
+main.c: In function ‘main’:
+main.c:216:27: warning: format ‘%d’ expects a matching ‘int *’ argument [-Wformat=]
+         sscanf(line, "%d %d", &file_descriptor);
+                          ~^
+main.c:268:8: warning: implicit declaration of function ‘quit’; did you mean ‘init’? [-Wimplicit-function-declaration]
+        quit();
+        ^~~~
+        init
+osmanbakari@ubuntu:~/Desktop/CPTS 360/cpts360-project$ clear
+
+osmanbakari@ubuntu:~/Desktop/CPTS 360/cpts360-project$ ./doit.sh mydisk 
+mke2fs 1.44.1 (24-Mar-2018)
+mydisk contains a ext2 file system
+	created on Fri Nov 15 11:46:51 2019
+Proceed anyway? (y,N) y
+Discarding device blocks: done                            
+Creating filesystem with 1440 1k blocks and 184 inodes
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Writing superblocks and filesystem accounting information: done
+
+init()
+
+mounting root .... 
+checking EXT2 FS ....OK
+bmp=8 imap=9 inode_start = 10
+
+mounting root successful.... 
+root refCount = 3
+creating P0 as running process
+root refCount = 4
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| ls
+cmd=ls pathname=
+
+
+drwx------   2    0    0    12288 Fri Nov 15 12:19:23 2019  lost+found
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| creat file1
+cmd=creat pathname=file1
+my_creat(): new file ino = 12  for filename=file1
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| creat file2
+cmd=creat pathname=file2
+my_creat(): new file ino = 13  for filename=file2
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| creat file3
+cmd=creat pathname=file3
+my_creat(): new file ino = 14  for filename=file3
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| ls
+cmd=ls pathname=
+
+
+drwx------   2    0    0    12288 Fri Nov 15 12:19:23 2019  lost+found
+-rw-r--r--   1    0    0        0 Fri Nov 15 12:19:30 2019  file1
+-rw-r--r--   1    0    0        0 Fri Nov 15 12:19:36 2019  file2
+-rw-r--r--   1    0    0        0 Fri Nov 15 12:19:42 2019  file3
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| open file1
+cmd=open pathname=file1
+Enter the file MODE (R | W | RW | APPEND) or exit to return to main menu: R
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| open file2
+cmd=open pathname=file2
+Enter the file MODE (R | W | RW | APPEND) or exit to return to main menu: RW
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| open file3
+cmd=open pathname=file3
+Enter the file MODE (R | W | RW | APPEND) or exit to return to main menu: APPEND
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| pfd
+cmd=pfd pathname=
+pfd:
+fd		mode		offset		INODE
+---		-----		-------		------
+-0-		READ----		0------		[3 , 14]-----
+-1-		READ/WRITE----		0------		[3 , 14]-----
+-2-		APPEND----		0------		[3 , 14]-----
+input command : [ls|cd|pwd|mkdir|creat|rmdir|link|unlink|symlink|open|close|lseek|pfd|read|cat|write|cp|mv|clear|quit| quit
+cmd=quit pathname=
+osmanbakari@ubuntu:~/Desktop/CPTS 360/cpts360-project$ 

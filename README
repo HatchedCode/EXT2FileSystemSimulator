@@ -1,0 +1,14 @@
+
+Download the .tgz files
+
+RUN zcat mountroot.tgz | tar xvf -
+
+to extract files.
+
+1. mkdisk : make a virtual disk with DIRs and FILEs
+
+2. mk     : cc main.c
+
+3. Sample soultions: a.out.32 or a.out.64
+
+4. Write YOUR OWN cd_ls_pwd.c file for ls, cd, pwd commands.
