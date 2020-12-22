@@ -13,5 +13,5 @@ open_close.c   : open, close, lseek, pfd\
 read_cat.c     : read, cat \
 write_cp.c     : write, cp \
 mount_umount.c : mount, umount\
-modified getino(), pwd() for cross mounting points\
-modified rmdir(), unlink() to check permission
+getino() and pwd() for cross mounting points\
+rmdir() and unlink() to check permission
